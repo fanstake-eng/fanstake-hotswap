@@ -1,0 +1,50 @@
+<project
+    xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
+>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.fanstake</groupId>
+    <artifactId>fanstake-hotswap</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+    <name>fanstake-hotswap</name>
+    <description>Hotswapping classloader for fast development iteration</description>
+    <url>https://fanstake.com</url>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.version>21</java.version>
+        <maven.compiler.release>${java.version}</maven.compiler.release>
+    </properties>
+
+    <!-- No dependencies! Yay! :) -->
+    <dependencies>
+    </dependencies>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>aboisvert</id>
+            <name>Alex Boisvert</name>
+            <email>alex@fanstake.com</email>
+            <url>https://github.com/aboisvert</url>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git@github.com:fanstake-eng/fanstake-hotswap.git</connection>
+        <developerConnection>scm:git:git@github.com:fanstake-eng/fanstake-hotswap.git</developerConnection>
+        <url>git@github.com:fanstake-eng/fanstake-hotswap.git</url>
+    </scm>
+
+    <build>
+    </build>
+
+</project>
