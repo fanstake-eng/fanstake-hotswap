@@ -38,10 +38,14 @@ public class HotSwapDirs {
   }
 
   private static List<Path> buildWatchingPaths() {
+    return buildWatchingPaths(System.getProperty("java.class.path"));
+  }
+
+  static List<Path> buildWatchingPaths(String classPath) {
     final var watchingDirSet = new HashSet<String>();
-    String[] classPathArray = System.getProperty("java.class.path").split(File.pathSeparator);
-    for (String classPath : classPathArray) {
-      buildDirs(new File(classPath.trim()), watchingDirSet);
+    String[] classPathArray = classPath.split(File.pathSeparator);
+    for (String classPathEntry : classPathArray) {
+      buildDirs(new File(classPathEntry.trim()), watchingDirSet);
     }
 
     final var dirList = new ArrayList<String>(watchingDirSet);
@@ -54,10 +58,14 @@ public class HotSwapDirs {
     return pathList;
   }
 
-  private static void buildDirs(File file, Set<String> watchingDirSet) {
+  static void buildDirs(File file, Set<String> watchingDirSet) {
     if (file.isDirectory() && !file.getName().contains("META-INF")) {
       watchingDirSet.add(file.getPath());
-      for (final File f : file.listFiles()) {
+      final var files = file.listFiles();
+      if (files == null) {
+        return;
+      }
+      for (final File f : files) {
         buildDirs(f, watchingDirSet);
       }
     }

@@ -5,6 +5,12 @@ build:
 test:
   mvn test
 
+coverage:
+  mvn test
+
+verify:
+  mvn verify
+
 testapp:
   java -cp target/classes:target/test-classes fanstake.testapp.Main
 

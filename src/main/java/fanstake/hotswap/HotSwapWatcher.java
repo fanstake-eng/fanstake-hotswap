@@ -28,7 +28,7 @@ public class HotSwapWatcher {
 
   private Thread thread;
 
-  private long quietcensePeriodMillis = 100;
+  private volatile long quietcensePeriodMillis = 100;
 
   private final Map<WatchKey, Path> keyToPath = new HashMap<>();
 
@@ -44,10 +44,13 @@ public class HotSwapWatcher {
   }
 
   public void setQuietcensePeriodMillis(long quietcensePeriodMillis) {
+    if (quietcensePeriodMillis <= 0) {
+      throw new IllegalArgumentException("quietcensePeriodMillis must be positive");
+    }
     this.quietcensePeriodMillis = quietcensePeriodMillis;
   }
 
-  private void startFrom(int serviceIndex) {
+  void startFrom(int serviceIndex) {
     // initialize the classloader stack
     for (int i = serviceIndex; i < serviceBuilders.length; i++) {
       final var parentClassLoader = (i == 0) ? rootClassLoader : classLoaders[i - 1];
@@ -65,7 +68,7 @@ public class HotSwapWatcher {
     }
   }
 
-  private void stopDownTo(int serviceIndex) {
+  void stopDownTo(int serviceIndex) {
     // stop services and clear out classloaders
     for (int i = serviceBuilders.length - 1; i >= serviceIndex; i--) {
       var parentService = (i == 0) ? null : services[i - 1];
@@ -75,7 +78,7 @@ public class HotSwapWatcher {
     }
   }
 
-  public void start() {
+  public synchronized void start() {
     if (thread != null) {
       log.warning("HotSwapWatcher is already running.");
       return;
@@ -116,6 +119,10 @@ public class HotSwapWatcher {
     } catch (Exception e) {
       log.severe("Exception occurred while running HotSwapWatcher: %s".formatted(e));
       throw new RuntimeException(e);
+    } finally {
+      synchronized (this) {
+        thread = null;
+      }
     }
   }
 
@@ -125,11 +132,11 @@ public class HotSwapWatcher {
       var lowestMatchingIndex = -1;
       while (true) {
         // log.debug("Checking for file changes...");
-        final var watchKey = watcher.poll(100, TimeUnit.MILLISECONDS);
+        final var watchKey = watcher.poll(quietcensePeriodMillis, TimeUnit.MILLISECONDS);
         if (watchKey != null) {
           // log.info("File change detected: %s", watchKey.watchable().toString());
           var matchingIndex = process(watchKey);
-          if (matchingIndex == 1 || matchingIndex > lowestMatchingIndex) {
+          if (matchingIndex != -1 && (lowestMatchingIndex == -1 || matchingIndex < lowestMatchingIndex)) {
             lowestMatchingIndex = matchingIndex;
           }
           watchKey.reset();
@@ -150,8 +157,11 @@ public class HotSwapWatcher {
     }
   }
 
-  private int process(WatchKey watchKey) {
+  int process(WatchKey watchKey) {
     final var path = keyToPath.get(watchKey);
+    if (path == null) {
+      return -1;
+    }
     final List<WatchEvent<?>> watchEvents = watchKey.pollEvents();
     var lowestMatchingIndex = -1;
     // log.info("Number of file modifications:%s", watchEvents.size());
@@ -184,6 +194,10 @@ public class HotSwapWatcher {
     return lowestMatchingIndex;
   }
 
+  void registerWatchKey(WatchKey watchKey, Path path) {
+    keyToPath.put(watchKey, path);
+  }
+
   @SuppressWarnings("UseSpecificCatch")
   private void addShutdownHook(WatchService watcher) {
     @SuppressWarnings({ "CallToPrintStackTrace", "ConvertToTryWithResources" })
@@ -201,7 +215,7 @@ public class HotSwapWatcher {
   }
 
   @SuppressWarnings("CallToPrintStackTrace")
-  public void stop() {
+  public synchronized void stop() {
     if (thread != null) {
       try {
         thread.interrupt();

@@ -32,10 +32,12 @@ public class HotSwapResolver {
       return false;
     }
 
+    // normalize the class filename to use forward slashes (for Windows)
+    final var normalizedClassFilename = classFilename.replace('\\', '/');
     for (String hotSwapClassPrefix1 : hotSwapClassPrefix) {
-      int pos = classFilename.indexOf(hotSwapClassPrefix1.replace('.', '/'));
+      int pos = normalizedClassFilename.indexOf(hotSwapClassPrefix1.replace('.', '/'));
       if (pos != -1) {
-        var className = classFilename.substring(pos, classFilename.length() - 6).replace('/', '.');
+        var className = normalizedClassFilename.substring(pos, normalizedClassFilename.length() - 6).replace('/', '.');
         log.fine("className %s match %s ?".formatted(className, hotSwapClassPrefix1));
         if (isHotSwapClass(className)) {
           return true;
