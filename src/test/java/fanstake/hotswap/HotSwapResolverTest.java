@@ -61,6 +61,31 @@ class HotSwapResolverTest {
   }
 
   @Test
+  void matchesInnerClassFiles() {
+    final var resolver = new HotSwapResolver();
+    resolver.addHotSwapClassPrefix("com.example.");
+
+    assertTrue(resolver.isHotswapFile("/tmp/classes/com/example/Outer$Inner.class"));
+  }
+
+  @Test
+  void packagePrefixWithTrailingDotDoesNotMatchSimilarPackageNames() {
+    final var resolver = new HotSwapResolver();
+    resolver.addHotSwapClassPrefix("com.example.");
+
+    assertFalse(resolver.isHotSwapClass("com.example2.Service"));
+    assertFalse(resolver.isHotswapFile("/tmp/classes/com/example2/Service.class"));
+  }
+
+  @Test
+  void packagePrefixWithoutTrailingDotMatchesByRawStringPrefix() {
+    final var resolver = new HotSwapResolver();
+    resolver.addHotSwapClassPrefix("com.example");
+
+    assertTrue(resolver.isHotSwapClass("com.example2.Service"));
+  }
+
+  @Test
   void defaultExclusionPreventsHotswappingLibraryClasses() {
     final var resolver = new HotSwapResolver();
     resolver.addHotSwapClassPrefix("fanstake.");
@@ -86,5 +111,15 @@ class HotSwapResolverTest {
     assertTrue(resolver.isHotSwapClass("com.example.Service"));
     assertTrue(resolver.isHotSwapClass("org.example.Service"));
     assertFalse(resolver.isHotSwapClass("net.example.Service"));
+  }
+
+  @Test
+  void trimmedBlankHotswapPrefixMatchesAnyNonExcludedClass() {
+    final var resolver = new HotSwapResolver();
+
+    resolver.addHotSwapClassPrefix(" ");
+
+    assertTrue(resolver.isHotSwapClass("com.example.Service"));
+    assertFalse(resolver.isHotSwapClass("fanstake.hotswap.HotSwapWatcher"));
   }
 }

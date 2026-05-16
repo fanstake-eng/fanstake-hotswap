@@ -30,6 +30,32 @@ class HotSwapClassLoaderTest {
   }
 
   @Test
+  void separateHotswapLoadersLoadDistinctClassInstances() throws Exception {
+    final var resolver = new HotSwapResolver();
+    resolver.addHotSwapClassPrefix("fanstake.testapp.child.");
+    final var first = new HotSwapClassLoader("first", resolver, getClass().getClassLoader());
+    final var second = new HotSwapClassLoader("second", resolver, getClass().getClassLoader());
+
+    final var firstClass = first.loadClass("fanstake.testapp.child.Child");
+    final var secondClass = second.loadClass("fanstake.testapp.child.Child");
+
+    assertNotSame(firstClass, secondClass);
+    assertSame(first, firstClass.getClassLoader());
+    assertSame(second, secondClass.getClassLoader());
+  }
+
+  @Test
+  void delegatesNonHotswapClassesToParent() throws Exception {
+    final var resolver = new HotSwapResolver();
+    resolver.addHotSwapClassPrefix("fanstake.testapp.child.");
+    final var loader = new HotSwapClassLoader("child", resolver, getClass().getClassLoader());
+
+    final var loadedClass = loader.loadClass("fanstake.testapp.Server");
+
+    assertSame(getClass().getClassLoader(), loadedClass.getClassLoader());
+  }
+
+  @Test
   void excludedHotswapClassesDelegateToParent() throws Exception {
     final var resolver = new HotSwapResolver();
     resolver.addHotSwapClassPrefix("fanstake.testapp.");
@@ -78,8 +104,53 @@ class HotSwapClassLoaderTest {
     assertTrue(failure.getMessage().contains("Failed to start child"));
   }
 
+  @Test
+  void newInstanceWrapsMissingPublicNoArgConstructor() {
+    final var failure = assertThrows(
+        RuntimeException.class,
+        () -> HotSwapClassLoader.newInstance(NoPublicConstructorLifecycle.class.getName()));
+
+    assertTrue(failure.getMessage().contains("Failed to start child"));
+  }
+
+  @Test
+  void newInstanceWrapsConstructorExceptions() {
+    final var failure = assertThrows(
+        RuntimeException.class,
+        () -> HotSwapClassLoader.newInstance(ThrowingConstructorLifecycle.class.getName()));
+
+    assertTrue(failure.getMessage().contains("Failed to start child"));
+  }
+
   public static class TestLifecycle implements Lifecycle {
     public TestLifecycle() {
+    }
+
+    @Override
+    public void start(Object parentService) {
+    }
+
+    @Override
+    public void stop(Object parentService) {
+    }
+  }
+
+  public static class NoPublicConstructorLifecycle implements Lifecycle {
+    private NoPublicConstructorLifecycle() {
+    }
+
+    @Override
+    public void start(Object parentService) {
+    }
+
+    @Override
+    public void stop(Object parentService) {
+    }
+  }
+
+  public static class ThrowingConstructorLifecycle implements Lifecycle {
+    public ThrowingConstructorLifecycle() {
+      throw new IllegalStateException("boom");
     }
 
     @Override

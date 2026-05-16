@@ -35,6 +35,19 @@ class HotSwapDirsTest {
   }
 
   @Test
+  void skipsDirectoriesWhoseNamesContainMetaInf() throws Exception {
+    final var root = Files.createDirectories(tempDir.resolve("classes"));
+    final var metaInfNamedDir = Files.createDirectories(root.resolve("not-META-INF-but-contains-it"));
+    Files.createDirectories(metaInfNamedDir.resolve("nested"));
+
+    final var paths = HotSwapDirs.buildWatchingPaths(root.toString());
+
+    assertTrue(paths.contains(root));
+    assertFalse(paths.contains(metaInfNamedDir));
+    assertFalse(paths.contains(metaInfNamedDir.resolve("nested")));
+  }
+
+  @Test
   void sortsAndDeduplicatesDiscoveredDirectories() throws Exception {
     final var b = Files.createDirectories(tempDir.resolve("b"));
     final var a = Files.createDirectories(tempDir.resolve("a"));
@@ -52,6 +65,17 @@ class HotSwapDirsTest {
     final var jar = Files.writeString(tempDir.resolve("library.jar"), "not a directory");
 
     assertEquals(java.util.List.of(), HotSwapDirs.buildWatchingPaths(jar.toString()));
+  }
+
+  @Test
+  void watchingPathUrlsMatchDiscoveredWatchingPaths() throws Exception {
+    final var paths = HotSwapDirs.getWatchingPaths();
+    final var urls = HotSwapDirs.buildWatchingPathsAsUrls();
+
+    assertEquals(paths.size(), urls.length);
+    for (int i = 0; i < paths.size(); i++) {
+      assertEquals(paths.get(i).toUri().toURL(), urls[i]);
+    }
   }
 
   @Test
