@@ -1,7 +1,7 @@
 package fanstake.hotswap;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -11,16 +11,20 @@ import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.Watchable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 
+@DisplayName("HotSwapWatcher")
+@Execution(ExecutionMode.SAME_THREAD)
 class HotSwapWatcherTest {
 
-  private static final List<String> events = Collections.synchronizedList(new ArrayList<>());
+  private static final List<String> events = new ArrayList<>();
 
   @BeforeEach
   void clearEvents() {
@@ -28,14 +32,17 @@ class HotSwapWatcherTest {
   }
 
   @Test
+  @DisplayName("rejects non-positive quietcense period")
   void rejectsNonPositiveQuietcensePeriod() {
     final var watcher = new HotSwapWatcher(getClass().getClassLoader());
 
-    assertThrows(IllegalArgumentException.class, () -> watcher.setQuietcensePeriodMillis(0));
-    assertThrows(IllegalArgumentException.class, () -> watcher.setQuietcensePeriodMillis(-1));
+    assertAll(
+        () -> assertThrows(IllegalArgumentException.class, () -> watcher.setQuietcensePeriodMillis(0)),
+        () -> assertThrows(IllegalArgumentException.class, () -> watcher.setQuietcensePeriodMillis(-1)));
   }
 
   @Test
+  @DisplayName("accepts positive quietcense period")
   void acceptsPositiveQuietcensePeriod() {
     final var watcher = new HotSwapWatcher(getClass().getClassLoader());
 
@@ -45,6 +52,7 @@ class HotSwapWatcherTest {
   }
 
   @Test
+  @DisplayName("start starts services once and stop stops them")
   void startStartsServicesOnceAndStopStopsThem() throws Exception {
     final var watcher = new HotSwapWatcher(
         getClass().getClassLoader(),
@@ -64,13 +72,15 @@ class HotSwapWatcherTest {
   }
 
   @Test
+  @DisplayName("start with no service builders fails clearly")
   void startWithNoServiceBuildersFailsClearly() {
     final var watcher = new HotSwapWatcher(getClass().getClassLoader());
 
-    assertThrows(ArrayIndexOutOfBoundsException.class, watcher::start);
+    assertThrows(IllegalStateException.class, watcher::start);
   }
 
   @Test
+  @DisplayName("starts services from requested index and stops down to requested index")
   void startsServicesFromRequestedIndexAndStopsDownToRequestedIndex() {
     final var watcher = new HotSwapWatcher(
         getClass().getClassLoader(),
@@ -94,6 +104,7 @@ class HotSwapWatcherTest {
   }
 
   @Test
+  @DisplayName("process returns -1 for unknown watch key")
   void processReturnsMinusOneForUnknownWatchKey() {
     final var watcher = new HotSwapWatcher(getClass().getClassLoader());
 
@@ -101,6 +112,7 @@ class HotSwapWatcherTest {
   }
 
   @Test
+  @DisplayName("process ignores overflow and non-class events")
   void processIgnoresOverflowAndNonClassEvents() {
     final var watcher = new HotSwapWatcher(
         getClass().getClassLoader(),
@@ -117,6 +129,7 @@ class HotSwapWatcherTest {
   }
 
   @Test
+  @DisplayName("process returns lowest matching class loader index")
   void processReturnsLowestMatchingClassLoaderIndex() {
     final var watcher = new HotSwapWatcher(
         getClass().getClassLoader(),
@@ -134,6 +147,7 @@ class HotSwapWatcherTest {
   }
 
   @Test
+  @DisplayName("process returns parent index when parent layer matches")
   void processReturnsParentIndexWhenParentLayerMatches() {
     final var watcher = new HotSwapWatcher(
         getClass().getClassLoader(),
@@ -150,6 +164,7 @@ class HotSwapWatcherTest {
   }
 
   @Test
+  @DisplayName("process returns parent index when batch matches parent and child layers")
   void processReturnsParentIndexWhenBatchMatchesParentAndChildLayers() {
     final var watcher = new HotSwapWatcher(
         getClass().getClassLoader(),
@@ -167,6 +182,7 @@ class HotSwapWatcherTest {
   }
 
   @Test
+  @DisplayName("process ignores excluded hot-swap prefixes")
   void processIgnoresExcludedHotswapPrefixes() {
     final var watcher = new HotSwapWatcher(
         getClass().getClassLoader(),
@@ -186,6 +202,7 @@ class HotSwapWatcherTest {
   }
 
   @Test
+  @DisplayName("process ignores irrelevant class changes while services are running")
   void processIgnoresIrrelevantClassChangesWhileServicesAreRunning() {
     final var watcher = new HotSwapWatcher(
         getClass().getClassLoader(),
@@ -238,7 +255,7 @@ class HotSwapWatcherTest {
   }
 
   private boolean eventuallyEventsAre(List<String> expectedEvents) throws InterruptedException {
-    final var deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+    final var deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(500);
     while (System.nanoTime() < deadline) {
       if (events.equals(expectedEvents)) {
         return true;

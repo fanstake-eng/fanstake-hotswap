@@ -1,5 +1,6 @@
 package fanstake.hotswap;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
@@ -10,15 +11,18 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+@DisplayName("HotSwapDirs")
 class HotSwapDirsTest {
 
   @TempDir
   Path tempDir;
 
   @Test
+  @DisplayName("discovers directories recursively and skips META-INF")
   void discoversDirectoriesRecursivelyAndSkipsMetaInf() throws Exception {
     final var root = Files.createDirectories(tempDir.resolve("classes"));
     final var packageDir = Files.createDirectories(root.resolve("com/example"));
@@ -27,14 +31,16 @@ class HotSwapDirsTest {
 
     final var paths = HotSwapDirs.buildWatchingPaths(root.toString());
 
-    assertTrue(paths.contains(root));
-    assertTrue(paths.contains(root.resolve("com")));
-    assertTrue(paths.contains(packageDir));
-    assertFalse(paths.contains(root.resolve("META-INF")));
-    assertFalse(paths.contains(root.resolve("META-INF/services")));
+    assertAll(
+        () -> assertTrue(paths.contains(root)),
+        () -> assertTrue(paths.contains(root.resolve("com"))),
+        () -> assertTrue(paths.contains(packageDir)),
+        () -> assertFalse(paths.contains(root.resolve("META-INF"))),
+        () -> assertFalse(paths.contains(root.resolve("META-INF/services"))));
   }
 
   @Test
+  @DisplayName("skips directories whose names contain META-INF")
   void skipsDirectoriesWhoseNamesContainMetaInf() throws Exception {
     final var root = Files.createDirectories(tempDir.resolve("classes"));
     final var metaInfNamedDir = Files.createDirectories(root.resolve("not-META-INF-but-contains-it"));
@@ -42,12 +48,14 @@ class HotSwapDirsTest {
 
     final var paths = HotSwapDirs.buildWatchingPaths(root.toString());
 
-    assertTrue(paths.contains(root));
-    assertFalse(paths.contains(metaInfNamedDir));
-    assertFalse(paths.contains(metaInfNamedDir.resolve("nested")));
+    assertAll(
+        () -> assertTrue(paths.contains(root)),
+        () -> assertFalse(paths.contains(metaInfNamedDir)),
+        () -> assertFalse(paths.contains(metaInfNamedDir.resolve("nested"))));
   }
 
   @Test
+  @DisplayName("sorts and deduplicates discovered directories")
   void sortsAndDeduplicatesDiscoveredDirectories() throws Exception {
     final var b = Files.createDirectories(tempDir.resolve("b"));
     final var a = Files.createDirectories(tempDir.resolve("a"));
@@ -61,6 +69,7 @@ class HotSwapDirsTest {
   }
 
   @Test
+  @DisplayName("ignores classpath entries that are files")
   void ignoresClasspathEntriesThatAreFiles() throws Exception {
     final var jar = Files.writeString(tempDir.resolve("library.jar"), "not a directory");
 
@@ -68,6 +77,7 @@ class HotSwapDirsTest {
   }
 
   @Test
+  @DisplayName("watching path URLs match discovered watching paths")
   void watchingPathUrlsMatchDiscoveredWatchingPaths() throws Exception {
     final var paths = HotSwapDirs.getWatchingPaths();
     final var urls = HotSwapDirs.buildWatchingPathsAsUrls();
@@ -79,6 +89,7 @@ class HotSwapDirsTest {
   }
 
   @Test
+  @DisplayName("buildDirs handles unreadable or vanished directory listings")
   void buildDirsHandlesUnreadableOrVanishedDirectoryListings() throws Exception {
     final var classFile = Files.writeString(tempDir.resolve("Service.class"), "compiled");
     final var watchingDirs = new HashSet<String>();

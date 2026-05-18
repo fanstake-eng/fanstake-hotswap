@@ -84,6 +84,10 @@ public class HotSwapWatcher {
       return;
     }
 
+    if (serviceBuilders.length == 0) {
+      throw new IllegalStateException("No service builders configured");
+    }
+
     startFrom(0);
 
     thread = new Thread(() -> run());
